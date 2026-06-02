@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>SAS Bonus Monitor</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json"/>
+  <meta name="theme-color" content="#4a8fde"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Bonus Monitor"/>
+  <link rel="apple-touch-icon" href="/icon-192.svg"/>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
+
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#060810;--bg2:#0c0f1a;--bg3:#080a12;
+      --border:#1a2030;--border2:#2a3a5a;
+      --text:#e8eaf0;--text2:#a0aac0;--text3:#5a6070;--muted:#3a4560;
+      --accent:#4a8fde;--accent2:#1a3a70;--accent-bg:#0d1525;
+      --green:#3a9a3a;--green-bg:#0a2010;
+      --amber:#9a7a2a;--amber-bg:#201508;
+      --red:#9a3a3a;--red-bg:#201010;
+      --safe-top:env(safe-area-inset-top);
+      --safe-bottom:env(safe-area-inset-bottom);
+    }
+    body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;padding-top:var(--safe-top)}
+    .app{max-width:980px;margin:0 auto;padding:28px 16px calc(80px + var(--safe-bottom))}
+
+    /* Header */
+    .header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:32px}
+    .eyebrow{font-size:10px;letter-spacing:.22em;color:var(--accent);text-transform:uppercase;margin-bottom:6px}
+    h1{font-family:'Syne',sans-serif;font-size:clamp(26px,7vw,50px);font-weight:800;line-height:1;
+       background:linear-gradient(135deg,var(--text) 30%,var(--accent));-webkit-background-clip:text;
+       -webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px}
+    .header p{font-size:11px;color:var(--text3)}
+    .header-right{display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0}
+    .mode-pill{display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:20px;font-size:10px;border:1px solid;white-space:nowrap}
+    .mode-pill.live{background:var(--green-bg);border-color:var(--green);color:var(--green)}
+    .mode-pill.demo{background:var(--amber-bg);border-color:var(--amber);color:var(--amber)}
+    .mode-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+    .mode-pill.live .mode-dot{background:var(--green);animation:blink 1.5s ease-in-out infinite}
+    .mode-pill.demo .mode-dot{background:var(--amber)}
+
+    /* Banner */
+    .banner{padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:11px;display:flex;align-items:flex-start;gap:8px;line-height:1.5}
+    .banner.live{background:var(--green-bg);border:1px solid var(--green);color:var(--green)}
+    .banner.demo{background:var(--amber-bg);border:1px solid var(--amber);color:var(--amber)}
+
+    /* Sections */
+    .sec{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+
+    /* Config */
+    .config-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px}
+    .config-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px}
+    .config-card label{display:block;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+    .config-card select,.config-card input[type=date]{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:6px 8px;outline:none;appearance:none;color-scheme:dark}
+
+    /* Chips */
+    .filter-row{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+    .chip{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:5px 13px;font-size:11px;color:var(--text2);cursor:pointer;user-select:none;transition:all .15s;font-family:'DM Mono',monospace;-webkit-tap-highlight-color:transparent}
+    .chip.on{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
+
+    /* Destinations */
+    .dest-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px}
+    @media(max-width:400px){.dest-grid{grid-template-columns:repeat(2,1fr)}}
+    .dest-chip{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 8px;cursor:pointer;text-align:center;user-select:none;transition:all .15s;-webkit-tap-highlight-color:transparent}
+    .dest-chip.on{border-color:var(--accent);background:var(--accent-bg)}
+    .dest-chip .flag{font-size:22px;display:block;margin-bottom:4px}
+    .dest-chip .city{font-size:10px;color:var(--text2)}
+    .dest-chip.on .city{color:var(--accent)}
+    .dest-chip .iata{font-size:8px;color:var(--muted);margin-top:2px}
+    .dest-chip .pts{font-size:8px;color:var(--muted);margin-top:1px}
+
+    /* Buttons */
+    .btn-row{display:flex;gap:8px;margin-bottom:24px}
+    .btn-primary{flex:1;padding:15px;background:var(--accent2);border:1px solid var(--accent);border-radius:10px;color:#e8eaf0;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent}
+    .btn-primary:active{transform:scale(.98)}
+    .btn-primary:disabled{opacity:.4;cursor:not-allowed}
+    .btn-primary.scanning{animation:pulse-btn 1.5s ease-in-out infinite}
+    @keyframes pulse-btn{0%,100%{background:var(--accent2)}50%{background:#1e3870}}
+    .btn-icon{padding:15px 17px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:16px;color:var(--text2);-webkit-tap-highlight-color:transparent}
+
+    /* Progress */
+    .progress-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:16px}
+    .progress-top{display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:8px}
+    .progress-track{background:var(--bg3);border-radius:4px;height:5px;overflow:hidden}
+    .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:4px;transition:width .4s ease}
+    .progress-routes{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+    .pr{font-size:9px;padding:2px 8px;border-radius:4px;border:1px solid var(--border);color:var(--muted)}
+    .pr.done{background:var(--green-bg);border-color:var(--green);color:var(--green)}
+    .pr.active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent);animation:pulse-route 1s ease-in-out infinite}
+    @keyframes pulse-route{0%,100%{opacity:1}50%{opacity:.5}}
+
+    /* Status */
+    .status-bar{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--text3)}
+    .dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0}
+    .dot.active{background:var(--green);animation:blink 1.2s ease-in-out infinite}
+    .dot.found{background:var(--accent)}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+    .count-badge{font-family:'Syne',sans-serif;font-weight:700;color:var(--accent);font-size:13px;margin-left:auto}
+
+    /* CT Banner */
+    .ct-banner{background:var(--green-bg);border:1px solid var(--green);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:11px;color:var(--green);line-height:1.5}
+
+    /* Summary */
+    .summary{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+    .pill{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:10px;color:var(--text3)}
+    .pill strong{color:var(--text2)}
+
+    /* Sort */
+    .sort-row{display:flex;gap:6px;margin-bottom:12px;align-items:center;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+    .sort-lbl{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);flex-shrink:0}
+    .sort-btn{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:4px 12px;font-size:10px;color:var(--text2);cursor:pointer;font-family:'DM Mono',monospace;flex-shrink:0;-webkit-tap-highlight-color:transparent}
+    .sort-btn.on{border-color:var(--accent);color:var(--accent);background:var(--accent-bg)}
+
+    /* Flight cards */
+    .results{display:flex;flex-direction:column;gap:8px}
+    .fcard{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;animation:slide-in .25s ease;transition:border-color .2s;position:relative}
+    .fcard.new{border-color:var(--accent);box-shadow:0 0 12px #4a8fde25}
+    @keyframes slide-in{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+    .new-badge{position:absolute;top:-1px;right:12px;background:var(--accent);color:#fff;font-size:7px;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:0 0 5px 5px}
+    .fcard-top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+    .fflag{font-size:26px;flex-shrink:0}
+    .froute{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--text);display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1}
+    .fcard-bottom{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}
+    .fmeta{font-size:10px;color:var(--text3);display:flex;gap:8px;flex-wrap:wrap}
+    .bdg{display:inline-block;padding:2px 7px;border-radius:4px;font-size:8px;letter-spacing:.06em;text-transform:uppercase}
+    .bdg.d{background:var(--green-bg);color:var(--green)}
+    .bdg.s{background:var(--amber-bg);color:var(--amber)}
+    .fright{text-align:right;flex-shrink:0}
+    .fpts-main{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:var(--accent);white-space:nowrap}
+    .fpts-ct{font-size:9px;color:var(--green);margin-top:1px}
+    .seats-bdg{display:inline-block;padding:2px 7px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-size:9px;color:var(--text3);margin-top:3px}
+    .fdate-main{font-size:11px;font-family:'Syne',sans-serif;font-weight:700;color:var(--text);white-space:nowrap}
+    .fdate-day{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+    .book-btn{display:inline-block;margin-top:8px;background:none;border:1px solid var(--border);border-radius:7px;padding:7px 14px;cursor:pointer;color:var(--text3);font-size:11px;font-family:'DM Mono',monospace;text-decoration:none;text-align:center;width:100%;transition:all .15s;-webkit-tap-highlight-color:transparent}
+    .book-btn:active{background:var(--accent-bg);border-color:var(--accent);color:var(--accent)}
+
+    /* Open Jaw */
+    .oj-card{background:var(--bg2);border:1px dashed var(--border2);border-radius:10px;padding:12px 14px;margin-bottom:8px}
+    .oj-route{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px}
+    .oj-meta{font-size:10px;color:var(--text3);margin-bottom:6px}
+    .oj-pts{font-family:'Syne',sans-serif;font-weight:800;font-size:15px;color:var(--accent)}
+
+    /* Log */
+    .log-panel{margin-top:32px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px}
+    .log-hdr{font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-bottom:10px}
+    .log-entry{font-size:10px;color:var(--text3);padding:3px 0;border-bottom:1px solid var(--border);display:flex;gap:8px}
+    .log-entry:last-child{border-bottom:none}
+    .log-ts{color:var(--muted);flex-shrink:0;font-style:italic}
+    .log-entry.ok{color:var(--green)}
+    .log-entry.info{color:var(--accent)}
+    .log-entry.warn{color:var(--amber)}
+    .log-entry.err{color:var(--red)}
+
+    /* Empty */
+    .empty{text-align:center;padding:50px 20px;color:var(--muted)}
+    .empty .big{font-size:48px;margin-bottom:12px}
+    .empty p{font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+
+    /* Spinner */
+    .spin-wrap{text-align:center;padding:20px;color:var(--text3);font-size:11px}
+    .spinner{display:inline-block;width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin-right:8px;vertical-align:middle}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* Toast */
+    .toast-wrap{position:fixed;bottom:calc(20px + var(--safe-bottom));right:16px;left:16px;z-index:999;display:flex;flex-direction:column-reverse;gap:8px;pointer-events:none}
+    .toast{background:var(--accent);color:#fff;border-radius:12px;padding:12px 16px;font-size:12px;box-shadow:0 8px 24px #00000050;animation:toast-in .3s ease;pointer-events:all}
+    @keyframes toast-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    .toast strong{font-family:'Syne',sans-serif;display:block;margin-bottom:2px}
+
+    /* Install banner */
+    .install-banner{background:var(--accent2);border:1px solid var(--accent);border-radius:10px;padding:12px 14px;margin-bottom:16px;display:flex;align-items:center;gap:12px;font-size:11px;color:var(--text2)}
+    .install-btn{background:var(--accent);border:none;border-radius:7px;padding:7px 14px;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:11px;cursor:pointer;flex-shrink:0;-webkit-tap-highlight-color:transparent}
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <div class="eyebrow">SAS EuroBonus</div>
+      <h1>Bonus Monitor</h1>
+      <p>Business class · Companion Ticket</p>
+    </div>
+    <div class="header-right">
+      <div id="modePill" class="mode-pill demo">
+        <div class="mode-dot"></div>
+        <span id="modeLabel">Kobler til…</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Install PWA banner (vises kun i nettleser, ikke i installert app) -->
+  <div id="installBanner" class="install-banner" style="display:none">
+    <span>📱 Legg til på hjemskjermen for app-opplevelse</span>
+    <button class="install-btn" onclick="installPWA()">Installer</button>
+  </div>
+
+  <!-- Connection banner -->
+  <div id="connBanner" class="banner demo">⏳ Kobler til…</div>
+
+  <!-- Config -->
+  <div class="sec">Innstillinger</div>
+  <div class="config-grid">
+    <div class="config-card">
+      <label>Reise fra</label>
+      <input type="date" id="dateFrom"/>
+    </div>
+    <div class="config-card">
+      <label>Reise til</label>
+      <input type="date" id="dateTo"/>
+    </div>
+    <div class="config-card">
+      <label>Companion Ticket</label>
+      <select id="withCT">
+        <option value="1">Ja – 2 pass. (CT)</option>
+        <option value="0">Nei – 1 passasjer</option>
+      </select>
+    </div>
+    <div class="config-card">
+      <label>Filter</label>
+      <select id="directOnly">
+        <option value="0">Alle avganger</option>
+        <option value="1">Kun direktefly</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Filter -->
+  <div class="filter-row">
+    <div class="chip on" id="soundChip" onclick="toggleSound()">🔔 Lyd på</div>
+  </div>
+
+  <!-- Destinations -->
+  <div class="sec">Destinasjoner</div>
+  <div class="dest-grid" id="destGrid"></div>
+
+  <!-- Buttons -->
+  <div class="btn-row">
+    <button class="btn-primary" id="mainBtn" onclick="handleToggle()">▶  Start overvåking</button>
+    <button class="btn-icon" id="refreshBtn" style="display:none" onclick="runScan()">⟳</button>
+  </div>
+
+  <!-- Progress -->
+  <div id="progressWrap" class="progress-wrap" style="display:none">
+    <div class="progress-top">
+      <span id="progressLabel">Søker…</span>
+      <span id="progressCount"></span>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="progress-routes" id="progressRoutes"></div>
+  </div>
+
+  <!-- CT Banner -->
+  <div id="ctBanner" class="ct-banner" style="display:none"></div>
+
+  <!-- Status -->
+  <div id="statusBar" class="status-bar" style="display:none">
+    <div class="dot" id="statusDot"></div>
+    <span id="statusText" style="flex:1"></span>
+    <span class="count-badge" id="countBadge"></span>
+  </div>
+
+  <!-- Summary -->
+  <div id="summary" class="summary" style="display:none"></div>
+
+  <!-- Sort -->
+  <div id="sortRow" class="sort-row" style="display:none">
+    <span class="sort-lbl">Sorter</span>
+    <button class="sort-btn on" onclick="setSort('date')">Dato</button>
+    <button class="sort-btn" onclick="setSort('points')">Poeng</button>
+    <button class="sort-btn" onclick="setSort('seats')">Seter</button>
+  </div>
+
+  <!-- Results -->
+  <div id="spinner" class="spin-wrap" style="display:none"><span class="spinner"></span>Henter ekte data fra SAS…</div>
+  <div id="results" class="results"></div>
+  <div id="empty" class="empty"><div class="big">🛫</div><p>Velg destinasjoner og start overvåking</p></div>
+
+  <!-- Open Jaw -->
+  <div id="ojSection" style="display:none">
+    <div class="sec" style="margin-top:28px">Open Jaw-forslag</div>
+    <div id="ojCards"></div>
+  </div>
+
+  <!-- Log -->
+  <div id="logPanel" class="log-panel" style="display:none">
+    <div class="log-hdr">Aktivitetslogg</div>
+    <div id="logEntries"></div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+// API-kall går til samme server (relative URLs)
+const API = "";
+
+const DESTINATIONS = [
+  {code:"TYO",label:"Tokyo",        flag:"🇯🇵",hub:"CPH",region:"Asia",   points:60000,stops:0,aircraft:"A350-900"},
+  {code:"ICN",label:"Seoul",        flag:"🇰🇷",hub:"CPH",region:"Asia",   points:60000,stops:0,aircraft:"A350-900"},
+  {code:"SIN",label:"Singapore",    flag:"🇸🇬",hub:"AMS",region:"Asia",   points:75000,stops:1,aircraft:"Boeing 777"},
+  {code:"LAX",label:"Los Angeles",  flag:"🇺🇸",hub:"CPH",region:"Amerika",points:60000,stops:0,aircraft:"A350-900"},
+  {code:"SFO",label:"San Francisco",flag:"🇺🇸",hub:"CPH",region:"Amerika",points:60000,stops:0,aircraft:"A330-300"},
+  {code:"EZE",label:"Buenos Aires", flag:"🇦🇷",hub:"AMS",region:"Amerika",points:90000,stops:1,aircraft:"Boeing 777"},
+];
+
+let selectedDests=["TYO","ICN","LAX","SFO","SIN"],scanning=false,loading=false;
+let flights=[],sortBy="date",soundOn=true,scanCount=0,lastScan=null;
+let seenIds=new Set(),scanInterval=null,logs=[];
+let deferredPrompt=null;
+
+// PWA install prompt
+window.addEventListener("beforeinstallprompt",e=>{
+  e.preventDefault(); deferredPrompt=e;
+  document.getElementById("installBanner").style.display="flex";
+});
+window.addEventListener("appinstalled",()=>{
+  document.getElementById("installBanner").style.display="none";
+});
+function installPWA(){
+  if(deferredPrompt){deferredPrompt.prompt();deferredPrompt=null;document.getElementById("installBanner").style.display="none";}
+}
+
+// Service Worker
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("/sw.js").catch(()=>{});
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  buildDestGrid();
+  checkBackend();
+  loadSaved();
+});
+
+function buildDestGrid(){
+  document.getElementById("destGrid").innerHTML=DESTINATIONS.map(d=>`
+    <div class="dest-chip ${selectedDests.includes(d.code)?"on":""}" id="dc_${d.code}" onclick="toggleDest('${d.code}')">
+      <span class="flag">${d.flag}</span>
+      <div class="city">${d.label}</div>
+      <div class="iata">${d.hub}→${d.code}</div>
+      <div class="pts">${(d.points/1000).toFixed(0)}k p</div>
+    </div>`).join("");
+}
+
+async function checkBackend(){
+  const pill=document.getElementById("modePill"),label=document.getElementById("modeLabel"),banner=document.getElementById("connBanner");
+  try{
+    const r=await fetch(`${API}/health`,{signal:AbortSignal.timeout(5000)});
+    if(r.ok){
+      pill.className="mode-pill live"; label.textContent="Live";
+      banner.className="banner live"; banner.innerHTML="✓ Koblet til – henter ekte bonusbilletter fra SAS";
+      addLog("Koblet til backend.","ok"); return;
+    }
+  }catch{}
+  pill.className="mode-pill demo"; label.textContent="Demo";
+  banner.className="banner demo"; banner.innerHTML="⚠ Ikke koblet til backend – viser simulerte data";
+  addLog("Simulert modus aktiv.","warn");
+}
+
+function loadSaved(){
+  try{
+    const raw=localStorage.getItem("sas-flights-pwa");
+    if(raw){flights=JSON.parse(raw);flights.forEach(f=>seenIds.add(f.id));addLog(`Lastet ${flights.length} lagrede funn.`,"info");renderFlights();}
+  }catch{}
+}
+
+function toggleDest(code){
+  selectedDests=selectedDests.includes(code)?selectedDests.filter(c=>c!==code):[...selectedDests,code];
+  document.getElementById(`dc_${code}`).className=`dest-chip ${selectedDests.includes(code)?"on":""}`;
+}
+
+function toggleSound(){
+  soundOn=!soundOn;
+  const c=document.getElementById("soundChip");
+  c.textContent=soundOn?"🔔 Lyd på":"🔕 Lyd av";
+  c.className=`chip ${soundOn?"on":""}`;
+}
+
+function playAlert(){
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    [440,554,659].forEach((freq,i)=>{
+      const osc=ctx.createOscillator(),gain=ctx.createGain();
+      osc.connect(gain);gain.connect(ctx.destination);
+      osc.frequency.value=freq;osc.type="sine";
+      gain.gain.setValueAtTime(0,ctx.currentTime+i*.12);
+      gain.gain.linearRampToValueAtTime(.18,ctx.currentTime+i*.12+.05);
+      gain.gain.linearRampToValueAtTime(0,ctx.currentTime+i*.12+.2);
+      osc.start(ctx.currentTime+i*.12);osc.stop(ctx.currentTime+i*.12+.25);
+    });
+  }catch{}
+}
+
+function setSort(key){
+  sortBy=key;
+  document.querySelectorAll(".sort-btn").forEach((b,i)=>b.className="sort-btn"+(["date","points","seats"][i]===key?" on":""));
+  renderFlights();
+}
+
+const fmtDate=iso=>new Date(iso).toLocaleDateString("no-NO",{day:"2-digit",month:"short",year:"numeric"});
+const fmtDay =iso=>new Date(iso).toLocaleDateString("no-NO",{weekday:"short"});
+const fmtPts =n=>Number(n).toLocaleString("no-NO");
+const nowTS  =()=>new Date().toTimeString().slice(0,8);
+const sasLink=(o,d,dt)=>`https://www.sas.no/book/flights/?search=OW_${o}-${d}-${(dt||"").replace(/-/g,"")}_a2c0i0y0&view=upsell&bookingFlow=points&sortBy=rec&filterBy=all`;
+
+function groupByHub(codes){
+  const g={};
+  codes.forEach(c=>{const d=DESTINATIONS.find(x=>x.code===c);const h=d?.hub||"CPH";if(!g[h])g[h]=[];g[h].push(c);});
+  return g;
+}
+
+function genFlights(){
+  const DEP={TYO:["09:00","10:30"],ICN:["10:15","14:00"],SIN:["11:00"],LAX:["11:30","14:45"],SFO:["10:00"],EZE:["12:00"]};
+  const now=new Date(),from=new Date(now.getTime()+30*86400000),to=new Date(now.getTime()+330*86400000);
+  return selectedDests.flatMap(code=>{
+    const dest=DESTINATIONS.find(d=>d.code===code);if(!dest)return[];
+    return Array.from({length:Math.floor(Math.random()*3)+2},(_,i)=>{
+      const date=new Date(from.getTime()+Math.random()*(to-from));
+      const dep=(DEP[code]||["10:00"])[Math.floor(Math.random()*(DEP[code]||["10:00"]).length)];
+      const arrH=(parseInt(dep)+10+dest.stops*3)%24;
+      const pts=dest.points+[-5000,0,0,5000][Math.floor(Math.random()*4)];
+      return{id:`${dest.hub}-${code}-${date.toISOString().slice(0,10)}-${i}`,
+        origin:dest.hub,destination:code,date:date.toISOString().slice(0,10),
+        departure:dep,arrival:`${String(arrH).padStart(2,"0")}:30`,
+        flight_number:`SK${Math.floor(Math.random()*800)+100}`,stops:dest.stops,
+        business_points:pts,business_seats:Math.floor(Math.random()*4)+1,
+        business_direct:dest.stops===0,aircraft:dest.aircraft,source:"simulert"};
+    });
+  }).sort((a,b)=>a.date.localeCompare(b.date));
+}
+
+async function runLiveScan(){
+  const hubGroups=groupByHub(selectedDests);
+  const allRoutes=Object.entries(hubGroups).map(([h,ds])=>`${h}→${ds.join(",")}`);
+  showProgress(allRoutes,0,null);
+  const params=new URLSearchParams({passengers:2,direct_only:document.getElementById("directOnly").value==="1"});
+  const df=document.getElementById("dateFrom").value,dt=document.getElementById("dateTo").value;
+  if(df)params.set("start_date",df);if(dt)params.set("end_date",dt);
+  const all=[];let done=0;
+  for(const[hub,dests]of Object.entries(hubGroups)){
+    const label=`${hub}→${dests.join(",")}`;
+    updateProgress(allRoutes,done,label);
+    addLog(`Søker ${hub} → ${dests.join(", ")}…`,"info");
+    params.set("origins",hub);params.set("destinations",dests.join(","));
+    try{
+      const r=await fetch(`${API}/routes?${params}`);
+      if(!r.ok)throw new Error(`HTTP ${r.status}`);
+      const data=await r.json();
+      all.push(...(data.data||[]));
+      addLog(`  → ${(data.data||[]).length} funn fra ${hub}`,"ok");
+    }catch(e){addLog(`  → Feil ${hub}: ${e.message}`,"err");}
+    done++;updateProgress(allRoutes,done,null);
+  }
+  hideProgress();return all;
+}
+
+async function runScan(){
+  if(selectedDests.length===0)return;
+  loading=true;updateUI();
+  addLog(`Søker ${selectedDests.length} destinasjoner…`,"info");
+  let found;
+  try{
+    const r=await fetch(`${API}/health`,{signal:AbortSignal.timeout(2000)});
+    found=r.ok?await runLiveScan():genFlights();
+  }catch{found=genFlights();}
+  const newOnes=found.filter(f=>!seenIds.has(f.id));
+  found.forEach(f=>{f.isNew=!seenIds.has(f.id);seenIds.add(f.id);});
+  flights=found;scanCount++;lastScan=new Date().toLocaleTimeString("no-NO");
+  loading=false;
+  try{localStorage.setItem("sas-flights-pwa",JSON.stringify(found));}catch{}
+  if(found.length>0){
+    addLog(`Ferdig – ${found.length} avganger (${newOnes.length} nye).`,"ok");
+    if(newOnes.length>0&&soundOn){playAlert();showToast("✈️ Nye bonusbilletter!",`${newOnes.length} nye seter funnet!`);}
+  }else{addLog("Ingen ledige bonusseter funnet.","warn");}
+  renderFlights();updateUI();
+}
+
+function handleToggle(){
+  if(scanning){clearInterval(scanInterval);scanning=false;addLog("Overvåking stoppet.","warn");}
+  else{
+    scanning=true;
+    addLog("Overvåking startet – søker hvert 10. minutt.","info");
+    runScan();scanInterval=setInterval(runScan,10*60*1000);
+  }
+  updateUI();
+}
+
+function showProgress(routes,done,active){document.getElementById("progressWrap").style.display="";updateProgress(routes,done,active);}
+function updateProgress(routes,done,active){
+  const pct=routes.length?Math.round(done/routes.length*100):0;
+  document.getElementById("progressFill").style.width=pct+"%";
+  document.getElementById("progressLabel").textContent=`Søker ${routes.length} ruter…`;
+  document.getElementById("progressCount").textContent=`${done}/${routes.length}`;
+  document.getElementById("progressRoutes").innerHTML=routes.map(r=>{
+    const isDone=routes.indexOf(r)<done,isActive=r===active;
+    return`<div class="pr ${isDone?"done":isActive?"active":""}">${isDone?"✓ ":isActive?"⟳ ":""}${r}</div>`;
+  }).join("");
+}
+function hideProgress(){document.getElementById("progressWrap").style.display="none";}
+
+function renderFlights(){
+  const withCT=document.getElementById("withCT").value==="1";
+  const sorted=[...flights].sort((a,b)=>{
+    if(sortBy==="date")return a.date.localeCompare(b.date);
+    if(sortBy==="points")return Number(a.business_points)-Number(b.business_points);
+    if(sortBy==="seats")return Number(b.business_seats)-Number(a.business_seats);
+    return 0;
+  });
+  const directCount=flights.filter(f=>f.business_direct).length;
+  const newCount=flights.filter(f=>f.isNew).length;
+  const minPts=flights.length?Math.min(...flights.map(f=>Number(f.business_points)||Infinity)):0;
+  const destCount=new Set(flights.map(f=>f.destination)).size;
+
+  const sum=document.getElementById("summary");
+  if(flights.length>0){
+    sum.style.display="flex";
+    sum.innerHTML=`<div class="pill">✈️ <strong>${directCount}</strong> direkte</div>
+      <div class="pill">🔁 <strong>${flights.length-directCount}</strong> m/stopp</div>
+      <div class="pill">🌍 <strong>${destCount}</strong> dest.</div>
+      <div class="pill">🆕 <strong>${newCount}</strong> nye</div>
+      ${minPts<Infinity?`<div class="pill">💺 Fra <strong>${fmtPts(minPts)} p</strong></div>`:""}`;
+  }else{sum.style.display="none";}
+
+  const ctBanner=document.getElementById("ctBanner");
+  if(withCT&&flights.length>0&&minPts<Infinity){
+    ctBanner.style.display="";
+    ctBanner.innerHTML=`🎫 <strong>Companion Ticket:</strong> Totalt <strong>${fmtPts(minPts)} poeng</strong> for begge — halv pris!`;
+  }else{ctBanner.style.display="none";}
+
+  document.getElementById("sortRow").style.display=flights.length>0?"flex":"none";
+
+  const resultsEl=document.getElementById("results"),emptyEl=document.getElementById("empty");
+  if(sorted.length>0){
+    emptyEl.style.display="none";
+    resultsEl.innerHTML=sorted.map(f=>{
+      const dest=DESTINATIONS.find(d=>d.code===f.destination)||{};
+      const pts=Number(f.business_points||0);
+      const url=sasLink(f.origin,f.destination,f.date);
+      const isLive=f.source&&f.source!=="simulert";
+      return`<div class="fcard ${f.isNew?"new":""}">
+        ${f.isNew?'<div class="new-badge">Nytt funn</div>':""}
+        <div class="fcard-top">
+          <div class="fflag">${dest.flag||"✈️"}</div>
+          <div style="flex:1">
+            <div class="froute">${f.origin}→${f.destination}
+              ${f.business_direct?'<span class="bdg d">Direkte</span>':`<span class="bdg s">${f.stops||"?"}stopp</span>`}
+            </div>
+            <div class="fmeta"><span>${f.flight_number||""}</span><span>${f.departure||""}→${f.arrival||""}</span><span style="font-style:italic;color:var(--muted)">${isLive?"● live":"○ sim"}</span></div>
+          </div>
+          <div class="fright">
+            <div class="fdate-main">${fmtDate(f.date)}</div>
+            <div class="fdate-day">${fmtDay(f.date)}</div>
+          </div>
+        </div>
+        <div class="fcard-bottom">
+          <div class="fpts-main">${fmtPts(pts)} p${withCT?`<span class="fpts-ct"> (${fmtPts(pts)}p for 2)</span>`:""}</div>
+          <div class="seats-bdg">${f.business_seats} sete${f.business_seats!==1?"r":""}</div>
+        </div>
+        <a href="${url}" target="_blank" class="book-btn">Bestill på sas.no →</a>
+      </div>`;
+    }).join("");
+  }else if(!loading){emptyEl.style.display="";resultsEl.innerHTML="";}
+
+  renderOpenJaw(withCT);
+}
+
+function renderOpenJaw(withCT){
+  const byDest={};flights.forEach(f=>{if(!byDest[f.destination])byDest[f.destination]=[];byDest[f.destination].push(f);});
+  const asia=Object.keys(byDest).filter(d=>DESTINATIONS.find(x=>x.code===d)?.region==="Asia");
+  const pairs=[];
+  for(let i=0;i<asia.length;i++)for(let j=i+1;j<asia.length;j++)
+    if(byDest[asia[i]][0]&&byDest[asia[j]][0])pairs.push({out:byDest[asia[i]][0],ret:byDest[asia[j]][0]});
+  const top=pairs.slice(0,3);
+  const oj=document.getElementById("ojSection"),ojCards=document.getElementById("ojCards");
+  if(top.length>0){
+    oj.style.display="";
+    ojCards.innerHTML=top.map(p=>{
+      const total=Number(p.out.business_points)+Number(p.ret.business_points);
+      return`<div class="oj-card">
+        <div class="oj-route">${p.out.origin}→${p.out.destination} · ${p.ret.destination}→${p.ret.origin}</div>
+        <div class="oj-meta">Ut: ${fmtDate(p.out.date)} | Hjem: ${fmtDate(p.ret.date)}</div>
+        <div class="oj-pts">${fmtPts(withCT?total:total*2)} p${withCT?" (2 pers.)":""}</div>
+      </div>`;
+    }).join("");
+  }else{oj.style.display="none";}
+}
+
+function updateUI(){
+  const btn=document.getElementById("mainBtn"),ref=document.getElementById("refreshBtn"),spin=document.getElementById("spinner");
+  const sb=document.getElementById("statusBar"),sd=document.getElementById("statusDot"),st=document.getElementById("statusText"),cb=document.getElementById("countBadge");
+  btn.disabled=loading||selectedDests.length===0;
+  if(loading){btn.textContent="Søker…";btn.className="btn-primary";spin.style.display="";}
+  else if(scanning){btn.textContent="⏹ Stopp overvåking";btn.className="btn-primary scanning";spin.style.display="none";}
+  else{btn.textContent="▶  Start overvåking";btn.className="btn-primary";spin.style.display="none";}
+  ref.style.display=scanning&&!loading?"":"none";
+  if(scanning||flights.length>0){
+    sb.style.display="flex";sd.className=`dot ${scanning?"active":flights.length?"found":""}`;
+    st.textContent=(scanning?"Overvåker…":"Fullført")+(lastScan?` · ${lastScan}`:"")+( scanCount>0?` · ${scanCount}r`:"");
+    cb.textContent=flights.length>0?`${flights.length} funn`:"";
+  }else{sb.style.display="none";}
+}
+
+function addLog(msg,type="info"){
+  logs.unshift({ts:nowTS(),msg,type});if(logs.length>40)logs.pop();
+  const panel=document.getElementById("logPanel"),entries=document.getElementById("logEntries");
+  panel.style.display="";
+  entries.innerHTML=logs.slice(0,10).map(l=>`<div class="log-entry ${l.type}"><span class="log-ts">${l.ts}</span><span>${l.msg}</span></div>`).join("");
+}
+
+function showToast(title,body){
+  const wrap=document.getElementById("toastWrap"),el=document.createElement("div");
+  el.className="toast";el.innerHTML=`<strong>${title}</strong>${body}`;
+  wrap.appendChild(el);setTimeout(()=>el.remove(),4500);
+}
+</script>
+</body>
+</html>
